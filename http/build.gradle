@@ -5,7 +5,7 @@ plugins {
     id 'signing'
 }
 String nameGroup = "dev.entao.app"
-String nameVersion = "0.5.0"
+String nameVersion = "0.5.1"
 String nameAF = "http"
 String nameGithub = "AppHttp"
 String libDesc = 'Android Library, http functions.'
