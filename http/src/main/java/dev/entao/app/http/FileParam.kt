@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package dev.entao.app.http
 
 import android.net.Uri
@@ -8,7 +10,7 @@ import java.io.File
  * Created by entaoyang@163.com on 2016-11-12.
  */
 
-//file, key, filename, mime都不能是空
+//file, key, filename, mime, NOT NULL
 class FileParam(
     val key: String,
     val file: Uri,
@@ -17,13 +19,13 @@ class FileParam(
 ) {
 
 
-    var progress: Progress? = null
+    var progress: HttpProgress? = null
 
     constructor(key: String, file: File) : this(
         key,
         Uri.fromFile(file),
         file.name,
-        MimeOfFile(file)
+        mimeOfFile(file)
     )
 
     fun mime(mime: String?): FileParam {
@@ -40,7 +42,7 @@ class FileParam(
         return this
     }
 
-    fun progress(progress: Progress?): FileParam {
+    fun progress(progress: HttpProgress?): FileParam {
         this.progress = progress
         return this
     }
@@ -50,7 +52,7 @@ class FileParam(
     }
 }
 
-fun MimeOfFile(file: File): String {
+fun mimeOfFile(file: File): String {
     val ext = file.extension
     if (ext != file.name && ext.isNotEmpty()) {
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)

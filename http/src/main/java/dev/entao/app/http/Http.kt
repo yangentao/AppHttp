@@ -4,14 +4,23 @@ package dev.entao.app.http
 
 
 import android.content.Context
-import android.net.Uri
-import java.io.*
-import java.net.HttpURLConnection
-import java.util.*
+import android.content.pm.ApplicationInfo
+import android.util.Log
 
 /**
  * Created by entaoyang@163.com on 2015-11-20.
  */
+
+object HttpConfig {
+    var allowDump: Boolean = false
+    var debugPrinter: (String) -> Unit = { Log.d("http", it) }
+    var errorPrinter: (String) -> Unit = { Log.e("http", it) }
+
+    fun allowDumpByDebugFlag(context: Context) {
+        allowDump = 0 != (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)
+    }
+}
+
 fun httpGet(url: String, block: HttpGet.() -> Unit): HttpResult {
     val h = HttpGet(url)
     h.block()

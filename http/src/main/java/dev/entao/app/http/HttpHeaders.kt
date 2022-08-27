@@ -89,4 +89,4 @@ internal object HeaderDelegate {
 internal annotation class HeaderName(val value: String)
 
 
-val KProperty<*>.headerName: String get() = this.findAnnotation<HeaderName>()?.value ?: this.name.headerKeyFormat
+internal val KProperty<*>.headerName: String get() = this.findAnnotation<HeaderName>()?.value ?: this.name.headerKeyFormat

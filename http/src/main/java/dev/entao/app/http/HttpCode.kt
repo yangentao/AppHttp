@@ -61,11 +61,11 @@ private val codeMap = hashMapOf(
     600 to "Unparseable Response Headers"
 )
 
-fun httpMsgByCode(code: Int): String? {
+internal fun httpMsgByCode(code: Int): String? {
     return codeMap[code]
 }
 
-object HttpCode {
+internal object HttpCode {
     const val Continue = 100
     const val SwitchingProtocols = 101
     const val Processing = 102

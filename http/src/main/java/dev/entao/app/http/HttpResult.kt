@@ -18,6 +18,7 @@ import java.util.concurrent.TimeoutException
 /**
  * Created by entaoyang@163.com on 16/4/29.
  */
+@Suppress("PropertyName")
 class HttpResult(val url: String) {
     var buffer: ByteArray? = null//如果Http.request参数给定了文件参数, 则,response是null
     var code: Int = 0//200
@@ -62,7 +63,7 @@ class HttpResult(val url: String) {
         return s
     }
 
-    fun dump() {
+    internal fun dump() {
         logd(">>Response:", this.url)
         logd("  >>status:", code, msg ?: "")
         val map = this.headers
@@ -82,11 +83,6 @@ class HttpResult(val url: String) {
             logd("  >>body:", this.bufferToString())
         }
 
-    }
-
-    fun needDecode(): HttpResult {
-        this.needDecode = true
-        return this
     }
 
     val valueBytes: ByteArray?

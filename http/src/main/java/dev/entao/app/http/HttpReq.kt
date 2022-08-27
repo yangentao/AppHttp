@@ -31,7 +31,7 @@ class HttpPost(url: String) : HttpReq(url, "POST") {
             val s = buildArgs()
             if (s.isNotEmpty()) {
                 write(os, s)
-                if (dumpReq) {
+                if (HttpConfig.allowDump) {
                     logd("--body:", s)
                 }
             }
@@ -64,7 +64,7 @@ class HttpRaw(url: String) : HttpReq(url, "POST") {
         val os = connection.outputStream
         try {
             os.write(rawData)
-            if (dumpReq && allowDump(this.headers.contentType)) {
+            if (HttpConfig.allowDump && allowDump(this.headers.contentType)) {
                 logd("--body:", String(rawData, Charsets.UTF_8))
             }
             os.flush()
@@ -75,6 +75,7 @@ class HttpRaw(url: String) : HttpReq(url, "POST") {
 }
 
 
+@Suppress("PrivatePropertyName")
 class HttpMultipart(val context: Context, url: String) : HttpReq(url, "POST") {
     private val BOUNDARY = System.currentTimeMillis().toString(16).uppercase()
 
@@ -187,11 +188,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
     var timeoutRead = 20000
 
     var saveToFile: File? = null
-    var progress: Progress? = null
-
-    var dumpReq: Boolean = true
-    var dumpResp: Boolean = true
-
+    var progress: HttpProgress? = null
 
     init {
         headers.userAgent = "Android AppHttp"
@@ -254,7 +251,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
     }
 
     open fun dumpReq() {
-        if (!dumpReq) {
+        if (!HttpConfig.allowDump) {
             return
         }
         logd("Http Request:", url)
@@ -347,7 +344,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
     protected abstract fun onSend(connection: HttpURLConnection)
 
     fun request(): HttpResult {
-        if (dumpReq) {
+        if (HttpConfig.allowDump) {
             dumpReq()
         }
         var connection: HttpURLConnection? = null
@@ -362,7 +359,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
             con.connect()
             onSend(con)
             val r = onResponse(con)
-            if (dumpResp) {
+            if (HttpConfig.allowDump) {
                 r.dump()
             }
             return r
@@ -380,7 +377,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
         }
     }
 
-    fun download(saveto: File, progress: Progress?): HttpResult {
+    fun download(saveto: File, progress: HttpProgress?): HttpResult {
         this.saveToFile = saveto
         this.progress = progress
         return request()
