@@ -7,14 +7,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.NetworkOnMainThreadException
 import android.util.Base64
-import dev.entao.application.App
-import dev.entao.base.Progress
-import dev.entao.base.closeSafe
-import dev.entao.base.copyToProgress
-import dev.entao.base.urlEncoded
-import dev.entao.json.YsonObject
-import dev.entao.log.logd
-import dev.entao.log.loge
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
@@ -96,11 +88,6 @@ class HttpRaw(url: String) : HttpReq(url) {
         return this
     }
 
-    fun jsonObject(block: YsonObject.() -> Unit): HttpRaw {
-        val yo = YsonObject()
-        yo.block()
-        return this.json(yo.toString())
-    }
 
     fun json(json: String): HttpRaw {
         return data("application/json;charset=utf-8", json.toByteArray(charsetUTF8))
@@ -242,8 +229,8 @@ abstract class HttpReq(val url: String) {
     private var saveToFile: File? = null
     private var progress: Progress? = null
 
-    var dumpReq: Boolean = App.debug
-    var dumpResp: Boolean = App.debug
+    var dumpReq: Boolean = true
+    var dumpResp: Boolean = true
 
     init {
         userAgent("android")
@@ -372,13 +359,6 @@ abstract class HttpReq(val url: String) {
 
     fun args(map: Map<String, String>): HttpReq {
         argMap.putAll(map)
-        return this
-    }
-
-    fun args(yo: YsonObject): HttpReq {
-        yo.keys.forEach {
-            argMap[it] = yo.getString(it) ?: ""
-        }
         return this
     }
 
