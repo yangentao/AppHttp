@@ -17,6 +17,9 @@ class MainActivity : AppCompatActivity() {
         }
         logd("agent".headerKeyFormat)
         logd("userAgent".headerKeyFormat)
+
+        val a = System.currentTimeMillis()
+        logd(a.toString(16) )
     }
 
     fun test() {

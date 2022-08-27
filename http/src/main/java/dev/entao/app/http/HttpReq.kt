@@ -10,14 +10,76 @@ import java.net.ProtocolException
 import java.net.URL
 import java.util.zip.GZIPInputStream
 
+
+class HttpGet(url: String) : HttpReq(url, "GET") {
+    override fun onSend(connection: HttpURLConnection) {
+    }
+}
+
+class HttpPost(url: String) : HttpReq(url, "POST") {
+
+    init {
+        headers.contentType = "application/x-www-form-urlencoded;charset=utf-8"
+    }
+
+    override fun onSend(connection: HttpURLConnection) {
+        val os = connection.outputStream
+        try {
+            val s = buildArgs()
+            if (s.isNotEmpty()) {
+                write(os, s)
+                if (dumpReq) {
+                    logd("--body:", s)
+                }
+            }
+            os.flush()
+        } finally {
+            os.closeSafe()
+        }
+    }
+}
+
+class HttpRaw(url: String) : HttpReq(url, "POST") {
+    private lateinit var rawData: ByteArray
+
+    fun data(contentType: String, data: ByteArray): HttpRaw {
+        headers.contentType = contentType
+        this.rawData = data
+        return this
+    }
+
+
+    fun json(json: String): HttpRaw {
+        return data("application/json;charset=utf-8", json.toByteArray(charsetUTF8))
+    }
+
+    fun xml(xml: String): HttpRaw {
+        return data("application/xml;charset=utf-8", xml.toByteArray(charsetUTF8))
+    }
+
+    override fun onSend(connection: HttpURLConnection) {
+        val os = connection.outputStream
+        try {
+            os.write(rawData)
+            if (dumpReq && allowDump(this.headers.contentType)) {
+                logd("--body:", String(rawData, Charsets.UTF_8))
+            }
+            os.flush()
+        } finally {
+            os.closeSafe()
+        }
+    }
+}
+
+
 internal const val UTF8 = "UTF-8"
 internal val charsetUTF8 = Charsets.UTF_8
 
 
-abstract class HttpReq(val url: String) {
+abstract class HttpReq(val url: String, private val method: String = "GET") {
     val headers: HttpHeaders = HttpHeaders()
     val allArgs = LinkedHashMap<String, String>()
-    protected var method: String = "GET"
+
     var timeoutConnect = 20000
     var timeoutRead = 20000
 
@@ -121,6 +183,13 @@ abstract class HttpReq(val url: String) {
         for (s in arr) {
             os.write(s.toByteArray(charsetUTF8))
         }
+    }
+
+    protected fun writeln(os: OutputStream, vararg arr: String) {
+        for (s in arr) {
+            os.write(s.toByteArray(charsetUTF8))
+        }
+        os.write("\r\n".toByteArray(charsetUTF8))
     }
 
     @Throws(IOException::class)

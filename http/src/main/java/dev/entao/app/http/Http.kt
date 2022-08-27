@@ -1,4 +1,4 @@
-@file:Suppress("MemberVisibilityCanBePrivate", "unused")
+@file:Suppress("MemberVisibilityCanBePrivate", "unused", "PrivatePropertyName")
 
 package dev.entao.app.http
 
@@ -36,84 +36,15 @@ fun httpMultipart(context: Context, url: String, block: HttpMultipart.() -> Unit
     return h.request()
 }
 
-class HttpGet(url: String) : HttpReq(url) {
-    init {
-        method = "GET"
-    }
 
-    override fun onSend(connection: HttpURLConnection) {
-    }
-}
-
-class HttpPost(url: String) : HttpReq(url) {
-
-    init {
-        method = "POST"
-        headers.contentType = "application/x-www-form-urlencoded;charset=utf-8"
-    }
-
-    override fun onSend(connection: HttpURLConnection) {
-        val os = connection.outputStream
-        try {
-            val s = buildArgs()
-            if (s.isNotEmpty()) {
-                write(os, s)
-                if (dumpReq) {
-                    logd("--body:", s)
-                }
-            }
-            os.flush()
-        } finally {
-            os.closeSafe()
-        }
-    }
-}
-
-class HttpRaw(url: String) : HttpReq(url) {
-    private lateinit var rawData: ByteArray
-
-    init {
-        method = "POST"
-    }
-
-    fun data(contentType: String, data: ByteArray): HttpRaw {
-        headers.contentType = contentType
-        this.rawData = data
-        return this
-    }
-
-
-    fun json(json: String): HttpRaw {
-        return data("application/json;charset=utf-8", json.toByteArray(charsetUTF8))
-    }
-
-    fun xml(xml: String): HttpRaw {
-        return data("application/xml;charset=utf-8", xml.toByteArray(charsetUTF8))
-    }
-
-    override fun onSend(connection: HttpURLConnection) {
-        val os = connection.outputStream
-        try {
-            os.write(rawData)
-            if (dumpReq && allowDump(this.headers.contentType)) {
-                logd("--body:", String(rawData, Charsets.UTF_8))
-            }
-            os.flush()
-        } finally {
-            os.closeSafe()
-        }
-    }
-}
-
-class HttpMultipart(val context: Context, url: String) : HttpReq(url) {
-    private val BOUNDARY = UUID.randomUUID().toString()
+class HttpMultipart(val context: Context, url: String) : HttpReq(url, "POST") {
+    private val BOUNDARY = System.currentTimeMillis().toString(16).uppercase()
     private val BOUNDARY_START = "--$BOUNDARY\r\n"
     private val BOUNDARY_END = "--$BOUNDARY--\r\n"
 
     private val fileList = ArrayList<FileParam>()
 
     init {
-        method = "POST"
         headers.contentType = "multipart/form-data; boundary=$BOUNDARY"
     }
 
@@ -178,7 +109,7 @@ class HttpMultipart(val context: Context, url: String) : HttpReq(url) {
         if (allArgs.size > 0) {
             for (e in allArgs.entries) {
                 write(os, BOUNDARY_START)
-                write(os, "Content-Disposition: form-data; name=\"", e.key, "\"\r\n")
+                write(os, "Content-Disposition: form-data; name=\"${e.key}\"\r\n")
                 write(os, "Content-Type:text/plain;charset=utf-8\r\n")
                 write(os, "\r\n")
                 write(os, e.value, "\r\n")
