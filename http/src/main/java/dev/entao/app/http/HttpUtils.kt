@@ -6,12 +6,6 @@ import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
 
 
-@Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
-@Retention(AnnotationRetention.RUNTIME)
-internal annotation class HeaderName(val value: String)
-
-
-val KProperty<*>.headerName: String get() = this.findAnnotation<HeaderName>()?.value ?: this.name.headerKeyFormat
 
 //accept => Accept
 //userAgent => User-Agent

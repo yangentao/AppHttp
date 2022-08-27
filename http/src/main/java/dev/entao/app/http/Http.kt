@@ -5,15 +5,9 @@ package dev.entao.app.http
 
 import android.content.Context
 import android.net.Uri
-import android.os.NetworkOnMainThreadException
-import android.util.Base64
 import java.io.*
 import java.net.HttpURLConnection
-import java.net.MalformedURLException
-import java.net.ProtocolException
-import java.net.URL
 import java.util.*
-import java.util.zip.GZIPInputStream
 
 /**
  * Created by entaoyang@163.com on 2015-11-20.
@@ -181,8 +175,8 @@ class HttpMultipart(val context: Context, url: String) : HttpReq(url) {
     @Throws(IOException::class)
     private fun sendMultipart(os: OutputStream) {
 
-        if (argMap.size > 0) {
-            for (e in argMap.entries) {
+        if (allArgs.size > 0) {
+            for (e in allArgs.entries) {
                 write(os, BOUNDARY_START)
                 write(os, "Content-Disposition: form-data; name=\"", e.key, "\"\r\n")
                 write(os, "Content-Type:text/plain;charset=utf-8\r\n")
