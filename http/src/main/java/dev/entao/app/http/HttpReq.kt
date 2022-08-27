@@ -2,12 +2,15 @@
 
 package dev.entao.app.http
 
+import android.content.Context
+import android.net.Uri
 import android.os.NetworkOnMainThreadException
 import java.io.*
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
 import java.net.ProtocolException
 import java.net.URL
+import java.util.ArrayList
 import java.util.zip.GZIPInputStream
 
 
@@ -72,7 +75,107 @@ class HttpRaw(url: String) : HttpReq(url, "POST") {
 }
 
 
-internal const val UTF8 = "UTF-8"
+class HttpMultipart(val context: Context, url: String) : HttpReq(url, "POST") {
+    private val BOUNDARY = System.currentTimeMillis().toString(16).uppercase()
+
+    private val fileList = ArrayList<FileParam>()
+
+    init {
+        headers.contentType = "multipart/form-data; boundary=$BOUNDARY"
+    }
+
+    fun file(fileParam: FileParam): HttpMultipart {
+        fileList.add(fileParam)
+        return this
+    }
+
+    fun file(key: String, file: Uri): HttpMultipart {
+        val p = FileParam(key, file)
+        return file(p)
+    }
+
+    fun file(key: String, file: Uri, block: FileParam.() -> Unit): HttpMultipart {
+        val p = FileParam(key, file)
+        p.block()
+        return file(p)
+    }
+
+
+    fun file(key: String, file: File): HttpMultipart {
+        val p = FileParam(key, file)
+        return file(p)
+    }
+
+
+    fun file(key: String, file: File, block: FileParam.() -> Unit): HttpMultipart {
+        val p = FileParam(key, file)
+        p.block()
+        return file(p)
+    }
+
+    override fun onSend(connection: HttpURLConnection) {
+        val os = connection.outputStream
+        try {
+            sendMultipart(os)
+            os.flush()
+        } finally {
+            os.closeSafe()
+        }
+    }
+
+    override fun dumpReq() {
+        super.dumpReq()
+        for (fp in fileList) {
+            logd("--file:", fp)
+        }
+    }
+
+    override fun preConnect(connection: HttpURLConnection) {
+        super.preConnect(connection)
+        if (fileList.size > 0) {
+            val os = SizeStream()
+            sendMultipart(os)
+            connection.setFixedLengthStreamingMode(os.size)
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun sendMultipart(os: OutputStream) {
+
+        if (allArgs.size > 0) {
+            for (e in allArgs.entries) {
+                writeln(os, "--$BOUNDARY")
+                writeln(os, "Content-Disposition: form-data; name=\"${e.key}\"")
+                writeln(os, "Content-Type:text/plain;charset=utf-8")
+                writeln(os)
+                writeln(os, e.value)
+            }
+        }
+        if (fileList.size > 0) {
+            for (fp in fileList) {
+                val fis = context.contentResolver.openInputStream(fp.file) ?: continue
+                writeln(os, "--$BOUNDARY")
+                writeln(os, "Content-Disposition:form-data;name=\"${fp.key}\";filename=\"${fp.filename}\"")
+                writeln(os, "Content-Type:${fp.mime}")
+                writeln(os, "Content-Transfer-Encoding: binary")
+                writeln(os)
+
+                val total = fis.available()
+                if (os is SizeStream) {
+                    os.incSize(total)
+                    fis.closeSafe()
+                } else {
+                    fis.copyToProgress(os, fp.progress)
+                    fis.closeSafe()
+
+                }
+                writeln(os)
+            }
+        }
+        writeln(os, "--$BOUNDARY--")
+    }
+}
+
 internal val charsetUTF8 = Charsets.UTF_8
 
 
@@ -195,10 +298,10 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
     @Throws(IOException::class)
     private fun onResponse(connection: HttpURLConnection): HttpResult {
         val result = HttpResult(this.url).apply {
-            responseCode = connection.responseCode
-            responseMsg = connection.responseMessage
+            code = connection.responseCode
+            msg = connection.responseMessage
             contentType = connection.contentType
-            headerMap = connection.headerFields
+            headers = connection.headerFields
             contentLength = connection.contentLength
         }
         val total = result.contentLength
@@ -231,7 +334,7 @@ abstract class HttpReq(val url: String, private val method: String = "GET") {
             os.flush()
             os.closeSafe()
             if (os is ByteArrayOutputStream) {
-                result.response = os.toByteArray()
+                result.buffer = os.toByteArray()
             }
         } catch (ex: Exception) {
             result.exception = ex
