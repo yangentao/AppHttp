@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import dev.entao.app.http.HttpConfig
 import dev.entao.app.http.httpGet
+import dev.entao.app.http.httpMultipart
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,7 +21,14 @@ class MainActivity : AppCompatActivity() {
             test()
         }
     }
-
+    fun test2() {
+        val resp = httpMultipart(this, "https://entao.dev/") {
+            "user" arg "tom"
+            file("fileA", File("..."))
+        }
+        val s = resp.valueText
+        Log.d("http", s ?: "null")
+    }
     fun test() {
         val url = "https://entao.dev/"
         val r = httpGet(url) {

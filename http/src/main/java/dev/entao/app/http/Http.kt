@@ -12,7 +12,7 @@ import android.util.Log
  */
 
 object HttpConfig {
-    var allowDump: Boolean = false
+    var allowDump: Boolean = true
     var debugPrinter: (String) -> Unit = { Log.d("http", it) }
     var errorPrinter: (String) -> Unit = { Log.e("http", it) }
 
