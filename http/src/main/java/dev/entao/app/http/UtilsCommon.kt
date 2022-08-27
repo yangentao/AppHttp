@@ -2,6 +2,7 @@ package dev.entao.app.http
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.util.Log
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
@@ -11,11 +12,13 @@ import java.net.URLEncoder
 private const val PROGRESS_DELAY = 50
 
 fun logd(vararg values: Any?) {
-
+    val s = values.joinToString(" ") { it?.toString() ?: "null" }
+    Log.d("xlog", s)
 }
 
 fun loge(vararg values: Any?) {
-
+    val s = values.joinToString(" ") { it?.toString() ?: "null" }
+    Log.e("xlog", s)
 }
 
 val Context.debug: Boolean get() = 0 != (this.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)
