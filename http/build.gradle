@@ -5,11 +5,11 @@ plugins {
     id 'signing'
 }
 String nameGroup = "dev.entao.app"
-String nameVersion = "0.5.1"
+String nameVersion = "0.6.0"
 String nameAF = "http"
 String nameGithub = "AppHttp"
 String libDesc = 'Android Library, http functions.'
-
+//检查AndroidManifest.xml中的package
 dependencies {
     api "org.jetbrains.kotlin:kotlin-stdlib"
     api "org.jetbrains.kotlin:kotlin-reflect"
@@ -24,6 +24,7 @@ group nameGroup
 version nameVersion
 
 android {
+    namespace = "dev.entao.app.$nameAF"
     compileSdk 32
 
     defaultConfig {
