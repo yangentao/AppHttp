@@ -55,7 +55,7 @@ class HttpPost(url: String) : HttpReq(url) {
 
     init {
         method = "POST"
-        header("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
+        headers.contentType = "application/x-www-form-urlencoded;charset=utf-8"
     }
 
     override fun onSend(connection: HttpURLConnection) {
@@ -83,7 +83,7 @@ class HttpRaw(url: String) : HttpReq(url) {
     }
 
     fun data(contentType: String, data: ByteArray): HttpRaw {
-        header("Content-Type", contentType)
+        headers.contentType = contentType
         this.rawData = data
         return this
     }
@@ -101,7 +101,7 @@ class HttpRaw(url: String) : HttpReq(url) {
         val os = connection.outputStream
         try {
             os.write(rawData)
-            if (dumpReq && allowDump(this.headerMap["Content-Type"])) {
+            if (dumpReq && allowDump(this.headers.contentType)) {
                 logd("--body:", String(rawData, Charsets.UTF_8))
             }
             os.flush()
@@ -120,7 +120,7 @@ class HttpMultipart(val context: Context, url: String) : HttpReq(url) {
 
     init {
         method = "POST"
-        header("Content-Type", "multipart/form-data; boundary=$BOUNDARY")
+        headers.contentType = "multipart/form-data; boundary=$BOUNDARY"
     }
 
     fun file(fileParam: FileParam): HttpMultipart {
@@ -214,312 +214,3 @@ class HttpMultipart(val context: Context, url: String) : HttpReq(url) {
         os.write(BOUNDARY_END.toByteArray())
     }
 }
-
-abstract class HttpReq(val url: String) {
-    val UTF8 = "UTF-8"
-    val charsetUTF8 = Charsets.UTF_8
-    protected var method: String = "GET"
-
-    protected val headerMap = HashMap<String, String>()
-    val argMap = HashMap<String, String>()
-
-    private var timeoutConnect = 20000
-    private var timeoutRead = 20000
-
-    private var saveToFile: File? = null
-    private var progress: Progress? = null
-
-    var dumpReq: Boolean = true
-    var dumpResp: Boolean = true
-
-    init {
-        userAgent("android")
-        accept("application/json,text/plain,text/html,*/*")
-//        acceptLanguage("zh-CN,en-US;q=0.8,en;q=0.6")
-        headerMap["Accept-Charset"] = "UTF-8,*"
-        headerMap["Connection"] = "close"
-
-    }
-
-    fun saveTo(file: File): HttpReq {
-        this.saveToFile = file
-        return this
-    }
-
-    //recv progress
-    fun progress(p: Progress?): HttpReq {
-        this.progress = p
-        return this
-    }
-
-    fun header(vararg pairs: Pair<String, String>): HttpReq {
-        for ((k, v) in pairs) {
-            headerMap[k] = v
-        }
-        return this
-    }
-
-    fun header(key: String, value: String): HttpReq {
-        headerMap[key] = value
-        return this
-    }
-
-    fun headers(map: Map<String, String>): HttpReq {
-        headerMap.putAll(map)
-        return this
-    }
-
-    fun timeoutConnect(millSeconds: Int): HttpReq {
-        this.timeoutConnect = millSeconds
-        return this
-    }
-
-    fun timeoutRead(millSeconds: Int): HttpReq {
-        this.timeoutRead = millSeconds
-        return this
-    }
-
-    fun accept(accept: String): HttpReq {
-        headerMap["Accept"] = accept
-        return this
-    }
-
-    fun acceptLanguage(acceptLanguage: String): HttpReq {
-        headerMap["Accept-Language"] = acceptLanguage
-        return this
-    }
-
-    fun auth(user: String, pwd: String): HttpReq {
-        val usernamePassword = "$user:$pwd"
-        val encodedUsernamePassword = Base64.encodeToString(usernamePassword.toByteArray(charsetUTF8), Base64.NO_WRAP)
-        headerMap["Authorization"] = "Basic $encodedUsernamePassword"
-        return this
-    }
-
-    fun authBearer(token: String): HttpReq {
-        headerMap["Authorization"] = "Bearer $token"
-        return this
-    }
-
-    fun userAgent(userAgent: String): HttpReq {
-        return header("User-Agent", userAgent)
-    }
-
-    infix fun String.TO(v: String) {
-        arg(this, v)
-    }
-
-    infix fun String.TO(v: Int) {
-        arg(this, v.toString())
-    }
-
-    infix fun String.TO(v: Long) {
-        arg(this, v.toString())
-    }
-
-    infix fun String.TO(v: Double) {
-        arg(this, v.toString())
-    }
-
-    infix fun String.TO(v: Boolean) {
-        arg(this, v.toString())
-    }
-
-    fun arg(key: String, value: String): HttpReq {
-        argMap[key] = value
-        return this
-    }
-
-    fun arg(key: String, value: Long): HttpReq {
-        argMap[key] = "" + value
-        return this
-    }
-
-    fun arg(key: String, value: Int): HttpReq {
-        argMap[key] = "" + value
-        return this
-    }
-
-    fun arg(key: String, value: Double): HttpReq {
-        argMap[key] = "" + value
-        return this
-    }
-
-    fun arg(key: String, value: Boolean): HttpReq {
-        argMap[key] = "" + value
-        return this
-    }
-
-    fun args(vararg args: Pair<String, String>): HttpReq {
-        for ((k, v) in args) {
-            argMap[k] = v
-        }
-        return this
-    }
-
-    fun args(map: Map<String, String>): HttpReq {
-        argMap.putAll(map)
-        return this
-    }
-
-
-    //[from, to]
-    fun range(from: Int, to: Int): HttpReq {
-        headerMap["Range"] = "bytes=$from-$to"
-        return this
-    }
-
-    fun range(from: Int): HttpReq {
-        headerMap["Range"] = "bytes=$from-"
-        return this
-    }
-
-    protected fun buildArgs(): String {
-        return argMap.map {
-            it.key.urlEncoded + "=" + it.value.urlEncoded
-        }.joinToString("&")
-    }
-
-    @Throws(MalformedURLException::class)
-    fun buildGetUrl(): String {
-        val sArgs = buildArgs()
-        var u: String = url
-        if (sArgs.isNotEmpty()) {
-            val n = u.indexOf('?')
-            if (n < 0) {
-                u += "?"
-            }
-            if ('?' != u[u.length - 1]) {
-                u += "&"
-            }
-            u += sArgs
-        }
-        return u
-    }
-
-    open fun dumpReq() {
-        if (!dumpReq) {
-            return
-        }
-        logd("Http Request:", url)
-        for ((k, v) in headerMap) {
-            logd("--head:", k, "=", v)
-        }
-        for ((k, v) in argMap) {
-            logd("--arg:", k, "=", v)
-        }
-    }
-
-    @Throws(ProtocolException::class, UnsupportedEncodingException::class)
-    protected open fun preConnect(connection: HttpURLConnection) {
-        HttpURLConnection.setFollowRedirects(true)
-        connection.doOutput = method != "GET"
-        connection.doInput = true
-        connection.connectTimeout = timeoutConnect
-        connection.readTimeout = timeoutRead
-        connection.requestMethod = method
-        connection.useCaches = false
-
-        for (e in headerMap.entries) {
-            connection.setRequestProperty(e.key, e.value)
-        }
-    }
-
-    @Throws(IOException::class)
-    protected fun write(os: OutputStream, vararg arr: String) {
-        for (s in arr) {
-            os.write(s.toByteArray(charsetUTF8))
-        }
-    }
-
-    @Throws(IOException::class)
-    private fun onResponse(connection: HttpURLConnection): HttpResult {
-        val result = HttpResult(this.url).apply {
-            responseCode = connection.responseCode
-            responseMsg = connection.responseMessage
-            contentType = connection.contentType
-            headerMap = connection.headerFields
-            contentLength = connection.contentLength
-        }
-        val total = result.contentLength
-        try {
-            val os: OutputStream = if (this.saveToFile != null) {
-                val dir = this.saveToFile!!.parentFile
-                if (dir != null) {
-                    if (!dir.exists()) {
-                        if (!dir.mkdirs()) {
-                            loge("创建目录失败")
-                            throw IOException("创建目录失败!")
-                        }
-                    }
-                }
-                FileOutputStream(saveToFile!!)
-            } else {
-                ByteArrayOutputStream(if (total > 0) total else 64)
-            }
-            //TODO  4xx, 5xx时直接返回
-            var input = connection.inputStream
-            val mayGzip = connection.contentEncoding
-            if (mayGzip != null && mayGzip.contains("gzip")) {
-                input = GZIPInputStream(input)
-            }
-            input.copyToProgress(os, progress, total)
-            input.closeSafe()
-            os.flush()
-            os.closeSafe()
-            if (os is ByteArrayOutputStream) {
-                result.response = os.toByteArray()
-            }
-        } catch (ex: Exception) {
-            result.exception = ex
-            ex.printStackTrace()
-        }
-        return result
-    }
-
-    @Throws(IOException::class)
-    protected abstract fun onSend(connection: HttpURLConnection)
-
-    fun request(): HttpResult {
-        var connection: HttpURLConnection? = null
-        try {
-            logd("request------------------------")
-            if (dumpReq) {
-                logd("request----------dumpReq--------------")
-                dumpReq()
-            }
-            connection = if (this is HttpGet || this is HttpRaw) {
-                URL(buildGetUrl()).openConnection() as HttpURLConnection
-            } else {
-                URL(url).openConnection() as HttpURLConnection
-            }
-
-            preConnect(connection)
-            connection.connect()
-            onSend(connection)
-            val r = onResponse(connection)
-            if (dumpResp) {
-                r.dump()
-            }
-            return r
-        } catch (ex: Exception) {
-            if (ex is NetworkOnMainThreadException) {
-                loge("主线程中使用了网络请求!")
-            }
-            ex.printStackTrace()
-            loge(ex)
-            val result = HttpResult(this.url)
-            result.exception = ex
-            return result
-        } finally {
-            connection?.disconnect()
-        }
-    }
-
-    fun download(saveto: File, progress: Progress?): HttpResult {
-        return saveTo(saveto).progress(progress).request()
-    }
-
-
-}
-
