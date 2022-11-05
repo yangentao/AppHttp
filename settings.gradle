@@ -11,7 +11,7 @@ dependencyResolutionManagement {
 		google()
 		mavenCentral()
 		maven {
-			url = 'http://maven.app800.cn/repository/public/'
+			url = 'https://app800.cn/maven/repository/public/'
 			allowInsecureProtocol(true)
 		}
 	}
